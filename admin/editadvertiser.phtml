@@ -1,0 +1,144 @@
+<?php
+  // Get some configuration constants and functions
+  require("inc/config.inc");
+  require("inc/classes.inc");
+  require("inc/functions.inc");
+
+  $sock = db_connect();
+
+  $required1 = array("username", "password", "fullname", "email");
+
+  // Check to see that all required form inputs are found
+  if ($step) {
+    for ($i = 0; $i < sizeof($required1); $i++) {
+      if (!strlen($$required1[$i])) {
+        $missing_info = 1;
+        break;
+      }
+    }
+  }
+
+  if ($id) {
+    $advertiser = new Advertiser(0, $id, $sock);
+    if (!$advertiser->id) {
+      $errmsg = "Advertiser ID supplied does not exist.";
+      $missing_info = 1;
+    }
+  }
+  else {
+    $advertiser = new Advertiser();
+  }
+
+  if ($step) {
+    if ($missing_info) {
+      $errmsg = "You didn't supply all of the required information.";
+    }
+    else {
+      // Format inputs
+      $username = strtolower(trim($username));
+      $fullname = trim($fullname);
+      $email = trim($email);
+
+      // Make sure no invalid characters are in the username
+      if (!ereg("[^a-zA-Z0-9]", $username)) {
+        // Username must be at least 3 characters, and no more than 12
+        if (strlen($username) >= 3 && strlen($username) <= 12) {
+          // Password must be at least 6 characters
+          if (strlen($password) >= 6) {
+            // Check to see if the username is already in use
+            if ($username != $advertiser->username && db_item_exists("username", "'$username'", "advertisers", $sock)) {
+              $errmsg = "Username supplied is already in use.";
+              $missing_info = 1;
+            }
+            else {
+              $advertiser->username = $username;
+              $advertiser->password = $password;
+              $advertiser->fullname = $fullname;
+              $advertiser->email = $email;
+
+              // If this is a new advertiser, create an opened timestamp
+              if (!$advertiser->id) {
+                $advertiser->opened = time();
+              }
+              // If this is an existing active advertiser, and the they
+              // are being deactivated, create a closing timestamp
+              if ($advertiser->id && $advertiser->active == 1 && $active == 0) {
+                $advertiser->closed = time();
+              }
+              else {
+                $advertiser->closed = 0;
+              }
+
+              $advertiser->active = $active;
+
+              if ($advertiser->id) {
+                $advertiser->update($sock);
+                $errmsg = "Advertiser " . $advertiser->username . " updated.";
+              }
+              else {
+                $advertiser->insert($sock);
+                $errmsg = "Advertiser " . $advertiser->username . " added.";
+              }
+            }
+          }
+          else {
+            $errmsg = "Passwords must be at least 6 characters in length.";
+            $missing_info = 1;
+          }
+        }
+        else {
+          $errmsg = "Usernames must 3 to 12 characters in length.";
+          $missing_info = 1;
+        }
+      }
+      else {
+        $errmsg = "Invalid character found in username.";
+        $missing_info = 1;
+      }
+    }
+  }
+?>
+
+<html>
+
+<head>
+<title>AdServ Administrator: Modify Advertiser</title>
+</head>
+
+<body bgcolor="#ffffff">
+<blockquote>
+<h1>AdServ Administrator</h1>
+
+<h2>Add Advertiser</h2>
+
+<ul>
+<li><b><a href="index.phtml">Back to the AdServ Administrator</a></b>
+</ul>
+
+<p>
+
+Usernames must be 3 to 12 characters in length, and contain only letters and numbers. Passwords must be at least 6 characters in length and are <i>case-sensitive</i> (ie, 'a' does not equal 'A').<p>
+
+<?php if ($step) echo "<font color=\"#ff0000\"><b>" . $errmsg . "</b></font>"; ?><p>
+
+<form action="<?php echo $PHP_SELF ?>" method="post">
+<input type="hidden" name="step" value="1">
+<input type="hidden" name="id" value="<?php echo $advertiser->id ?>">
+
+<font face="Courier">
+<pre>
+Username      <input type="text" name="username" value="<?php echo $advertiser->username ?>" size=12 maxlength=12>
+Password      <input type="text" name="password" value="<?php echo $advertiser->password ?>" size=12 maxlength=8>
+Fullname      <input type="text" name="fullname" value="<?php echo $advertiser->fullname ?>" size=24 maxlength=128>
+Email Address <input type="text" name="email"    value="<?php echo $advertiser->email ?>" size=24 maxlength=128>
+Active        <input type="radio" name="active" value="1"<?php if ($advertiser->active == 1) echo " checked" ?>>Yes &nbsp;&nbsp; <input type="radio" name="active" value="0"<?php if ($advertiser->active == 0) echo " checked" ?>>No
+
+           <input type="submit" value="Add User">
+</pre>
+</font>
+
+</form>
+
+</body>
+</html>
+

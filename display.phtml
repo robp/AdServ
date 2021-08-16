@@ -1,0 +1,110 @@
+<?php
+  // Get some configuration constants and functions
+  require("admin/inc/config.inc");
+  require("admin/inc/classes.inc");
+  require("admin/inc/functions.inc");
+
+  $sock = db_connect();
+
+  $required1 = array("id");
+
+  // Check to see that all required form inputs are found
+  for ($i = 0; $i < sizeof($required1); $i++) {
+    if (!strlen($$required1[$i])) {
+      $missing_info = 1;
+      break;
+    }
+  }
+
+  if ($missing_info) {
+    $result = "No location id specified.";
+  }
+  else {
+    $location = new Location (0, $id, $sock);
+
+    // When we select, we want to make sure the location
+    // and the ad are both active
+    $query = "SELECT b.* FROM locations AS a, ads AS b
+              WHERE a.id = " . $location->id . "
+              AND a.active = 1
+              AND a.id = b.location_id
+              AND b.active = 1
+              ORDER BY b.id";
+
+    if (!$sql_result = mysql_query($query, $sock)) {
+      echo mysql_error();
+      exit();
+    }
+
+    $num_rows = mysql_num_rows($sql_result);
+
+    if ($num_rows > 0) {
+      mysql_data_seek($sql_result, $location->next_ad % $num_rows);
+      $ad = new Ad(mysql_fetch_row($sql_result));
+
+      // If the freq_cnt variable + 1 is >= than the frequency of the ad,
+      // then it's time to move to the next ad, so incr the next_ad var, and
+      // reset the freq_cnt to 0
+      if ($location->freq_cnt + 1 >= $ad->frequency) {
+        $location->next_ad++;
+        $location->freq_cnt = 0;
+      }
+      else
+        $location->freq_cnt++;
+
+      $location->update($sock);
+
+      $ad->imp_used++;
+
+      // Check if this is the impression that meets the mail threshold
+      // If so, send an email warning message.
+      if ($ad->imp_purchased - $ad->imp_used == $location->mail_threshold) {
+        $advertiser = new Advertiser (0, $ad->advertiser_id, $sock);
+
+        $from = "From: " . EMAIL_SENDER_NAME . " <" . EMAIL_SENDER_ADDRESS . ">";
+        $subject = "AD #" . $ad->id . " nearing completion";
+        $msg = "
+Dear " . $advertiser->fullname . ",
+
+Your advertisement #" . $ad->id . " is nearing completion of its run. The ad currently has ~ " . $location->mail_threshold . " impressions left. If you would like to purchase more impressions for this ad, please contact " . OWNER_NAME . " at any of the following addresses:
+
+" . OWNER_ADDRESS . "
+
+If you do not wish to purchase any more impressions for this ad, you needn't do anything and your ad will automatically end when the full number of impressions have been used.
+
+Best regards,
+
+" . OWNER_NAME . "
+";
+
+        mail($advertiser->email, $subject, $msg, $from);
+      }
+
+      // Check to see if this is supposed to be the last impression.
+      // If so, close the ad.
+      if ($ad->imp_used >= $ad->imp_purchased) {
+        $ad->active = 0;
+        $ad->closed = time();
+      }
+
+      $ad->update($sock);
+
+      if ($secure == 1)
+        $location->img_loc = str_replace("http://", "https://", $location->img_loc);
+      $result = "<a href=\"" . REDIR_SCRIPT . "?id=" . $ad->id . "&dt=" . time() . "&im=" . $ad->imp_used . "\">";
+      $result .= "<img width=\"" . $location->width . "\" ";
+      $result .= "height=\"" . $location->height . "\" ";
+      $result .= "src=\"" . $location->img_loc . $ad->filename . "\"";
+      if (isset($border))
+        $result .= " border=\"" . $border . "\"";
+      if (!isset($noalt))
+        $result .= " alt=\"" . $ad->alttext . "\"";
+      $result .= "></a>";
+    }
+    else {
+      $result = "No ads in location, or location is inactive.";
+    }
+  }
+
+  echo $result;
+?>

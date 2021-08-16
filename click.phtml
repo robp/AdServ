@@ -1,0 +1,47 @@
+<?php
+  // Get some configuration constants and functions
+  require("admin/inc/config.inc");
+  require("admin/inc/classes.inc");
+  require("admin/inc/functions.inc");
+
+  $sock = db_connect();
+
+  $required1 = array("id", "dt", "im");
+
+  // Check to see that all required form inputs are found
+  for ($i = 0; $i < sizeof($required1); $i++) {
+    if (!strlen($$required1[$i])) {
+      $missing_info = 1;
+      break;
+    }
+  }
+
+  if ($missing_info) {
+    $errmsg = "Missing click information.";
+  }
+  else {
+    $ad = new Ad (0, $id, $sock);
+    if ($ad->active == 1) {
+      $ad->clickthroughs++;
+      $ad->update($sock);
+      $click = new Click();
+      $click->ad_id = $ad->id;
+      $click->imp = $im;
+      $click->time = time();
+      $click->dtime = $dt;
+      $click->host = getenv("REMOTE_HOST");
+      if (!strlen($click->host))
+        $click->host = getenv("REMOTE_ADDR");
+      $click->url = getenv("HTTP_REFERER");
+      $click->agent = getenv("HTTP_USER_AGENT");
+      $click->insert($sock);
+      header("Location: $ad->link_url");
+      exit();
+    }
+    else {
+      $errmsg = "Invalid ad id specified, or ad is inactive.";
+    }
+  }
+
+  echo $errmsg;
+?>

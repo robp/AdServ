@@ -1,0 +1,107 @@
+<?php
+  // Get some configuration constants and functions
+  require("inc/config.inc");
+  require("inc/classes.inc");
+  require("inc/functions.inc");
+
+  $sock = db_connect();
+
+  $required1 = array("id");
+  $required2 = array("active", "filename", "alttext", "link_url",
+                     "imp_purchased", "frequency");
+
+  // Check to see that all required form inputs are found
+  for ($i = 0; $i < sizeof($required1); $i++) {
+    if (!strlen($$required1[$i])) {
+      $missing_info = 1;
+      break;
+    }
+  }
+  if ($step) {
+    for ($i = 0; $i < sizeof($required1); $i++) {
+      if (!strlen($$required2[$i])) {
+        $missing_info = 1;
+        break;
+      }
+    }
+  }
+
+  if ($missing_info) {
+    $errmsg = "You didn't supply all of the required information.";
+  }
+  else {
+    $ad = new Ad (0, $id, $sock);
+    $location = new Location (0, $ad->location_id, $sock);
+  }
+
+  if ($step && !$missing_info) {
+    $ad->filename = $filename;
+    $ad->alttext = $alttext;
+    $ad->link_url = $link_url;
+    $ad->imp_purchased = $imp_purchased;
+    $ad->frequency = $frequency;
+    if ($ad->active == 1 && $active == 0)
+      $ad->closed = time();
+    $ad->active = $active;
+
+    $ad->update($sock);
+    $errmsg = "Ad updated.";
+  }
+?>
+
+<html>
+
+<head>
+<title>AdServ Administrator: Edit Ad</title>
+</head>
+
+<body bgcolor="#ffffff">
+<blockquote>
+<h1>AdServ Administrator</h1>
+
+<h2>Edit Ad</h2>
+
+Enter new information into the fields. Press the Update button when finished.<p>
+
+<ul>
+<li><b><a href="viewlocation.phtml?id=<?php echo $location->id ?>">Back to Location <?php echo $location->id ?></a><b>
+</ul>
+
+<p>
+
+<?php if ($step) echo "<font color=\"#ff0000\"><b>" . $errmsg . "</b></font>"; ?><p>
+
+<h2>Ad <?php echo $ad->id ?></h2>
+
+<?php
+  if ($ad->active == 1):
+?>
+  <img width="<?php echo $location->width ?>" height="<?php echo $location->height ?>" border="<?php echo $location->border ?>" src="<?php echo $location->img_loc . $ad->filename ?>" alt="<?php echo $ad->alttext ?>"><p>
+<?php
+  endif;
+?>
+
+<form action="<?php echo $PHP_SELF ?>" method="post">
+<input type="hidden" name="step" value="1">
+<input type="hidden" name="id" value="<?php echo $ad->id ?>">
+
+<table border=0>
+<tr><td>Active?</td><td><input type="radio" name="active" value="1"<?php echo ($ad->active == 1 ? " checked" : "") ?>> Yes<br>
+<input type="radio" name="active" value="0"<?php echo ($ad->active == 0 ? " checked" : "") ?>> No</td></tr>
+
+<tr><td>Location</td><td colspan=3><?php echo $location->title ?></td></tr>
+<tr><td>Advertiser</td><td colspan=3><?php echo get_username_by_id("advertisers", $ad->advertiser_id, $sock) ?></td></tr>
+<tr><td>Filename</td><td colspan=3><input type="text" name="filename" value="<?php echo $ad->filename ?>" size=40 maxlength=80></td></tr>
+<tr><td>Alt Text</td><td colspan=3><input type="text" name="alttext" value="<?php echo $ad->alttext ?>" size=40 maxlength=255></td></tr>
+<tr><td>Link URL</td><td colspan=3><input type="text" name="link_url" size=40 value="<?php echo $ad->link_url ?>" maxlength=255></td></tr>
+<tr><td>Impressions<br>Purchased</td><td><input type="text" name="imp_purchased" value="<?php echo $ad->imp_purchased ?>" size=10 maxlength=10></td><td>Frequency</td><td><input type="text" name="frequency" value="<?php echo $ad->frequency ?>" size=10 maxlength=10></td></tr>
+<tr></tr>
+<tr><td></td><td colspan=3><input type="reset" value="Undo Changes"> &nbsp; <input type="submit" value="Make Changes"></td></tr>
+</table>
+
+</form>
+
+</blockquote>
+</body>
+</html>
+

@@ -1,0 +1,114 @@
+<?php
+  // Get some configuration constants and functions
+  require("inc/config.inc");
+  require("inc/classes.inc");
+  require("inc/functions.inc");
+
+  $sock = db_connect();
+
+  $required1 = array("id");
+  $required2 = array("advertiser_id", "filename", "alttext", "link_url",
+                     "imp_purchased", "frequency");
+
+  // Check to see that all required form inputs are found
+  for ($i = 0; $i < sizeof($required1); $i++) {
+    if (!strlen($$required1[$i])) {
+      $missing_info = 1;
+      break;
+    }
+  }
+
+  if ($missing_info)
+    $errmsg = "You didn't supply all of the required information.";
+  else
+    $location = new Location (0, $id, $sock);
+
+  if ($step) {
+    for ($i = 0; $i < sizeof($required2); $i++) {
+      if (!strlen($$required2[$i])) {
+        $missing_info = 1;
+        break;
+      }
+    }
+  }
+
+  if ($missing_info) {
+    $errmsg = "You didn't supply all of the required information.";
+  }
+  else {
+    $location = new Location (0, $id, $sock);
+
+    // Format inputs
+    $filename = trim($filename);
+    $alttext = trim($alttext);
+    $link_url = trim($link_url);
+    $imp_purchased = trim($imp_purchased);
+    $frequency = trim($frequency);
+
+    // Make sure the numeric input are numeric
+    if ($imp_purchased > 0 && $frequency > 0) {
+      $ad = new Ad();
+      $ad->location_id = $location->id;
+      $ad->advertiser_id = $advertiser_id;
+      $ad->filename = $filename;
+      $ad->alttext = $alttext;
+      $ad->link_url = $link_url;
+      $ad->imp_purchased = $imp_purchased;
+      $ad->imp_used = 0;
+      $ad->frequency = $frequency;
+      $ad->clickthroughs = 0;
+      $ad->opened = time();
+      $ad->closed = 0;
+      $ad->active = 1;
+
+      $ad->insert($sock);
+      $errmsg = "Ad " . $ad->id . " inserted.";
+    }
+    else {
+      $errmsg = "Width or height specified is not a valid integer.";
+      $missing_info = 1;
+    }
+  }
+?>
+
+<html>
+
+<head>
+<title>AdServ Administrator: Insert a new ad</title>
+</head>
+
+<body bgcolor="#ffffff">
+<blockquote>
+<h1>AdServ Administrator</h1>
+
+<h2>Location <?php echo $location->id ?>: Insert a new ad</h2>
+
+Enter all of the following information about the advertisement, then press the Insert Ad button.<p>
+
+<ul>
+<li><b><a href="viewlocation.phtml?id=<?php echo $location->id ?>">Back to Location <?php echo $location->id ?></a></b>
+</ul>
+
+<p>
+
+<?php if ($step) echo "<font color=\"#ff0000\"><b>" . $errmsg . "</b></font>"; ?><p>
+
+<form action="addad.phtml" method="post">
+<input type="hidden" name="step" value="1">
+<input type="hidden" name="id" value="<?php echo $location->id ?>">
+
+<table border=0>
+<tr><td>Location</td><td colspan=3><?php echo $location->title ?></td></tr>
+<tr><td>Advertiser</td><td colspan=3><select name="advertiser_id"><option value=""> <?php list_advertisers_select(0, $sock) ?></select></td></tr>
+<tr><td>Filename</td><td colspan=3><input type="text" name="filename" size=40 maxlength=80></td></tr>
+<tr><td>Alt Text</td><td colspan=3><input type="text" name="alttext" size=40 maxlength=255></td></tr>
+<tr><td>Link URL</td><td colspan=3><input type="text" name="link_url" size=40 value="http://" maxlength=255></td></tr>
+<tr><td>Impressions<br>Purchased</td><td><input type="text" name="imp_purchased" size=10 maxlength=10></td><td>Frequency</td><td><input type="text" name="frequency" size=10 maxlength=10></td></tr>
+<tr></tr>
+<tr><td></td><td colspan=3><input type="submit" value="Insert Ad"></td></tr>
+</table>
+</form>
+
+</body>
+</html>
+

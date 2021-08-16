@@ -1,0 +1,129 @@
+<?php
+  // Get some configuration constants and functions
+  require("inc/config.inc");
+  require("inc/classes.inc");
+  require("inc/functions.inc");
+
+  $sock = db_connect();
+
+  $host = new Host();
+  $host->id = 0;
+  $host->username = ADMIN_USERNAME;
+  $host->password = ADMIN_PASSWORD;
+  $host->fullname = "AdServ Administrator";
+  $host->opened   = 1;
+  $host->closed   = 0;
+  $host->active   = 1;
+?>
+
+<html>
+
+<head>
+<title>AdServ Administrator</title>
+</head>
+
+<body bgcolor="#ffffff">
+<blockquote>
+<h1>AdServ Administrator</h1>
+
+<ul>
+<li><b><a href="edithost.phtml">Add a new host</a></b>
+<li><b><a href="editadvertiser.phtml">Add a new advertiser</a></b>
+<li><b><a href="editlocation.phtml">Add a new location</a></b>
+</ul>
+
+<p>
+
+<h2>Locations (Active)</h2>
+
+<table border=1 width=90%>
+<tr>
+<th>ID</th>
+<th width=100%>Title</th>
+<th>Host</th>
+<th>Ads Displayed</th>
+<th>Opened</th>
+</tr>
+
+<?php
+  // Display all active locations for the current user
+  $query = "SELECT * FROM locations WHERE active = 1 ";
+
+  // If the user is not the admin, only show locations 
+  // that this user owns
+  if ($host->id != 0) {
+    $query .= "AND host_id = " . $host->id . " ";
+  }
+
+  $query .= "ORDER BY id";
+
+  if (!$sql_result = mysql_query($query, $sock)) {
+    echo mysql_error();
+    exit();
+  }
+
+  $num_rows = mysql_num_rows($sql_result);
+
+  if ($num_rows > 0) {
+    for ($a = 0; $a < $num_rows; $a++) {
+      $location = new Location(mysql_fetch_row($sql_result));
+      printf("<tr><td align=right>%d</td><td><a href=\"viewlocation.phtml?id=%d\">%s</a></td><td>%s</td><td align=right>%s</td><td nowrap>%s</td></tr>",
+        $location->id, $location->id, $location->title,
+        get_username_by_id("hosts", $location->host_id, $sock),
+        format_numbers(get_location_imps($location->id, $sock)),
+        date("d M Y H:i:s", $location->opened));
+    }
+  }
+?>
+
+</table>
+
+<p>
+
+<h2>Locations (Inactive)</h2>
+
+<table border=1 width=90%>
+<tr>
+<th>ID</th>
+<th width=100%>Title</th>
+<th>Host</th>
+<th>Ads Displayed</th>
+<th>Closed</th>
+</tr>
+
+<?php
+  // Display all active locations for the current user
+  $query = "SELECT * FROM locations WHERE active = 0 ";
+
+  // If the user is not the admin, only show locations 
+  // that this user owns
+  if ($host->id != 0) {
+    $query .= "AND host_id = " . $host->id . " ";
+  }
+
+  $query .= "ORDER BY id";
+
+  if (!$sql_result = mysql_query($query, $sock)) {
+    echo mysql_error();
+    exit();
+  }
+
+  $num_rows = mysql_num_rows($sql_result);
+
+  if ($num_rows > 0) {
+    for ($a = 0; $a < $num_rows; $a++) {
+      $location = new Location(mysql_fetch_row($sql_result));
+      printf("<tr><td align=right>%d</td><td><a href=\"viewlocation.phtml?id=%d\">%s</a></td><td>%s</td><td align=right>%s</td><td nowrap>%s</td></tr>",
+        $location->id, $location->id, $location->title,
+        get_username_by_id("hosts", $location->host_id, $sock),
+        format_numbers(get_location_imps($location->id, $sock)),
+        date("d M Y H:i:s", $location->closed));
+    }
+  }
+?>
+
+</table>
+
+</body>
+</html>
+

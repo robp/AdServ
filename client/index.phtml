@@ -1,0 +1,125 @@
+<?php
+  // Get some configuration constants and functions
+  require("../admin/inc/config.inc");
+  require("../admin/inc/classes.inc");
+  require("../admin/inc/functions.inc");
+
+  $sock = db_connect();
+
+  if ($username || $password) {
+    $username = strtolower(trim($username));
+    
+    $query = "SELECT * FROM advertisers
+               WHERE username = '" . addslashes($username) . "'
+                 AND active = 1";
+
+    if (!$sql_result = mysql_query($query, $sock)) {
+      echo mysql_error();
+      exit();
+    }
+
+    if (mysql_num_rows($sql_result) == 1) {
+      $advertiser = new Advertiser(mysql_fetch_row($sql_result), 0, $sock);
+
+      if ($password == $advertiser->password) {
+        $advertiser_id = $advertiser->id;
+        session_register("advertiser_id");
+        header("Location: viewlist.phtml");
+        exit();
+      }
+      else {
+        $errmsg = "Login incorrect.";
+      }
+    }
+    else {
+      $errmsg = "Login incorrect.";
+    }
+  }
+?>
+
+<html>
+
+<head>
+<title><?php echo OWNER_NAME ?> AdServ Client Login</title>
+</head>
+
+<body bgcolor="#ffffff">
+<blockquote>
+
+  <table border=0 cellpadding=0 cellspacing=0>
+  <tr><td colspan=2>
+  <font face="Arial, MS Sans Serif, Helvetica" size=2>
+  <font color=green size=+2><b><?php echo OWNER_NAME ?> AdServ Client Login</b></font><br>
+  <hr noshade size=2><p>
+
+  Enter your AdServ client username and password to login.<p>
+
+  <?php if ($errmsg) echo "<font color=red><b>" . $errmsg . "</b></font><p>" ?>
+
+  <form action="<?php echo $PHP_SELF ?>" method=post>
+
+    <table border=0>
+    <tr>
+    <td>
+    <font face="Arial, MS Sans Serif, Helvetica" size=2>
+    <b>Username:</b>
+    </font>
+    </td>
+
+    <td>
+    <font face="Arial, MS Sans Serif, Helvetica" size=2>
+    <input type=text name="username" value="" size=20 maxlength=12>
+    </font>
+    </td>
+    </tr>
+
+    <tr>
+    <td>
+    <font face="Arial, MS Sans Serif, Helvetica" size=2>
+    <b>Password:</b>
+    </font>
+    </td>
+
+    <td>
+    <font face="Arial, MS Sans Serif, Helvetica" size=2>
+    <input type=password name="password" size=20 maxlength=20>
+    </font>
+    </td>
+    </tr>
+
+    <tr><td></td></tr>
+    <tr><td></td></tr>
+
+    <tr>
+    <td align=right colspan=2>
+    <font face="Arial, MS Sans Serif, Helvetica" size=2>
+    <input type=image name=login border=0 src="img/button-login.gif">
+    </font>
+    </td>
+    </tr>
+    </table>
+
+  <p>
+
+  <hr noshade size=2>
+  </td>
+  </tr>
+
+  <tr>
+  <td>
+  <font face="Arial, MS Sans Serif, Helvetica" size=2>
+  <i>AdServ version <?php echo ADSERV_VERSION ?>
+  </font>
+  </td>
+  <td align=right>
+  <font face="Arial, MS Sans Serif, Helvetica" size=2>
+  <i><b><a href="mailto:<?php echo EMAIL_SENDER_ADDRESS ?>"><font color=green><?php echo EMAIL_SENDER_ADDRESS ?></font></a></b></i>
+  </font>
+  </td>
+  </tr>
+  </table>
+
+</blockquote>
+</body>
+</html>
+

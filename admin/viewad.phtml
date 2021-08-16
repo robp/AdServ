@@ -1,0 +1,121 @@
+<?php
+  // Get some configuration constants and functions
+  require("inc/config.inc");
+  require("inc/classes.inc");
+  require("inc/functions.inc");
+
+  $sock = db_connect();
+
+  $required1 = array("id");
+
+  // Check to see that all required form inputs are found
+  for ($i = 0; $i < sizeof($required1); $i++) {
+    if (!strlen($$required1[$i])) {
+      $missing_info = 1;
+      break;
+    }
+  }
+
+  if ($missing_info) {
+    $errmsg = "You didn't supply all of the required information.";
+  }
+  else {
+    $ad = new Ad (0, $id, $sock);
+    $location = new Location (0, $ad->location_id, $sock);
+  }
+?>
+
+<html>
+
+<head>
+<title>AdServ: View Ad</title>
+</head>
+
+<body bgcolor="#ffffff">
+<blockquote>
+
+<h1>AdServ: View Ad</h1>
+
+<ul>
+<li><b><a href="viewlocation.phtml?id=<?php echo $location->id ?>">Back to Location <?php echo $location->id ?></a><b>
+</ul>
+
+<p>
+
+<h2>Ad <?php echo $ad->id ?></h2>
+
+<?php
+  if ($ad->active == 1):
+?>
+  <img width="<?php echo $location->width ?>" height="<?php echo $location->height ?>" border="<?php echo $location->border ?>" src="<?php echo $location->img_loc . $ad->filename ?>" alt="<?php echo $ad->alttext ?>"><p>
+<?php
+  endif;
+?>
+
+<table border=1 cellspacing=0 cellpadding=4>
+<tr><td>Active?</td><td colspan=3><?php if ($ad->active == 1) echo "Yes"; else echo "No"; ?></td></tr>
+
+<tr><td>Location</td><td colspan=3><?php echo $location->title ?></td></tr>
+<tr><td>Advertiser</td><td colspan=3><?php echo get_username_by_id("advertisers", $ad->advertiser_id, $sock) ?></td></tr>
+<tr><td>Filename</td><td colspan=3><?php echo $ad->filename ?></td></tr>
+<tr><td>Alt Text</td><td colspan=3><?php echo $ad->alttext ?></td></tr>
+<tr><td>Link URL</td><td colspan=3><?php echo $ad->link_url ?></td></tr>
+<tr><td>Impressions<br>Purchased</td><td><?php echo format_numbers($ad->imp_purchased) ?></td><td>Frequency</td><td><?php echo $ad->frequency ?></td></tr>
+</table>
+
+<p>
+
+<ul>
+<li><a href="editad.phtml?id=<?php echo $ad->id ?>">Edit this information</a>
+</ul>
+
+<h2>Clickthrough Information</h2>
+
+<table border=1 cellspacing=0 cellpadding=4>
+<tr>
+<th>ID</th>
+<th>Imp. #</th>
+<th>Displayed</th>
+<th>Clicked</th>
+<th>View Time</th>
+<th>Remote Host</th>
+<th>Click URL</th>
+<th>User Agent</th>
+</tr>
+
+<?php
+  $query = "SELECT * FROM clicks
+            WHERE ad_id = " . $ad->id;
+
+  if (!$sql_result = mysql_query($query, $sock)) {
+    echo mysql_error();
+    html_exit();
+  }
+
+  $num_rows = mysql_num_rows($sql_result);
+
+  for ($i = 0; $i < $num_rows; $i++) {
+    $click = new Click (mysql_fetch_row($sql_result));
+    printf("<tr>
+<td nowrap align=center><font size=-1>%d</font></td>
+<td nowrap align=center><font size=-1>%d</font></td>
+<td nowrap><font size=-1>%s</font></td>
+<td nowrap><font size=-1>%s</font></td>
+<td nowrap><font size=-1>%d</font></td>
+<td nowrap><font size=-1>%s</font></td>
+<td nowrap><font size=-1>%s</font></td>
+<td nowrap><font size=-1>%s</font></td>",
+      $click->id, $click->imp,
+ date("m/d/Y H:i:s", $click->dtime),
+ date("m/d/Y H:i:s", $click->time),
+ $click->time - $click->dtime,
+ $click->host, $click->url, $click->agent);
+  }
+?>
+
+</table>
+
+</blockquote>
+</body>
+</html>
+

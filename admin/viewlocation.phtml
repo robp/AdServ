@@ -1,0 +1,170 @@
+<?php
+  // Get some configuration constants and functions
+  require("inc/config.inc");
+  require("inc/classes.inc");
+  require("inc/functions.inc");
+
+  $sock = db_connect();
+
+  $required1 = array("id");
+
+  // Check to see that all required form inputs are found
+  for ($i = 0; $i < sizeof($required1); $i++) {
+    if (!strlen($$required1[$i])) {
+      $missing_info = 1;
+      break;
+    }
+  }
+
+  if ($missing_info) {
+    $errmsg = "You didn't supply all of the required information.";
+  }
+  else {
+    $location = new Location (0, $id, $sock);
+  }
+?>
+
+<html>
+
+<head>
+<title>AdServ Administrator: View Location</title>
+</head>
+
+<body bgcolor="#ffffff">
+<blockquote>
+<h1>AdServ Administrator</h1>
+
+<h2>Location <?php echo $location->id ?>: <?php echo $location->title ?></h2>
+
+<ul>
+<li><b><a href="index.phtml">Back to the AdServ Administrator</a></b>
+<li><b><a href="addad.phtml?id=<?php echo $location->id ?>">Insert a new advertisement</a></b>
+</ul>
+
+<h2>Ad List (Active)</h2>
+
+<form action="nothing" method="post">
+
+<table border=1 width=90%>
+<tr>
+<th>ID</th>
+<th>Advertiser</th>
+<th>Alt Text</th>
+<th>Frequency</th>
+<th>Imp. Prchsd.</th>
+<th>Imp. Used</th>
+<th>Clicks</th>
+<th>Click %</th>
+</tr>
+
+<?php
+  // Display all active ads for the current location
+  $query = "SELECT * FROM ads
+            WHERE location_id = " . $location->id . " AND active = 1
+            ORDER BY id";
+
+  if (!$sql_result = mysql_query($query, $sock)) {
+    echo mysql_error();
+    exit();
+  }
+
+  $num_rows = mysql_num_rows($sql_result);
+
+  if ($num_rows > 0) {
+    for ($a = 0; $a < $num_rows; $a++) {
+      $ad = new Ad(mysql_fetch_row($sql_result));
+      $percentage = ($ad->clickthroughs / $ad->imp_used) * 100;
+      printf("<tr><td align=center><b><a href=\"viewad.phtml?id=%d\">%d</a></b></td><td align=center><a href=\"editadvertiser.phtml?id=%d\">%s</a></td><td><input type=text size=14 value=\"%s\"></td><td align=center>%d</td><td align=right>%s</td><td align=right>%s</td><td align=right>%s</td><td align=right>%.2f</td></tr>\n",
+        $ad->id, $ad->id, $ad->advertiser_id,
+        get_username_by_id("advertisers", $ad->advertiser_id, $sock),
+        $ad->alttext, $ad->frequency,
+        format_numbers($ad->imp_purchased), format_numbers($ad->imp_used),
+        format_numbers($ad->clickthroughs), $percentage);
+        //date("d M Y H:i:s", $location->opened));
+    }
+  }
+?>
+
+</table>
+
+<p>
+
+<h2>Ad List (Inactive)</h2>
+
+<table border=1 width=90%>
+<tr>
+<th>ID</th>
+<th>Image File</th>
+<th>Alt Text</th>
+<th>Frequency</th>
+<th>Imp. Prchsd.</th>
+<th>Imp. Used</th>
+<th>Clicks</th>
+<th>Click %</th>
+</tr>
+
+<?php
+  // Display all inactive ads for the current location
+  $query = "SELECT * FROM ads
+            WHERE location_id = " . $location->id . " AND active = 0
+            ORDER BY id";
+
+  if (!$sql_result = mysql_query($query, $sock)) {
+    echo mysql_error();
+    exit();
+  }
+
+  $num_rows = mysql_num_rows($sql_result);
+
+  if ($num_rows > 0) {
+    for ($a = 0; $a < $num_rows; $a++) {
+      $ad = new Ad(mysql_fetch_row($sql_result));
+      $percentage = ($ad->clickthroughs / $ad->imp_used) * 100;
+      printf("<tr><td align=center><b><a href=\"viewad.phtml?id=%d\">%d</a></b></td><td><input type=text size=10 value=\"%s\"></td><td><input type=text size=14 value=\"%s\"></td><td align=center>%d</td><td align=right>%s</td><td align=right>%s</td><td align=right>%s</td><td align=right>%.2f</td></tr>\n",
+        $ad->id, $ad->id, $ad->filename, $ad->alttext, $ad->frequency,
+        format_numbers($ad->imp_purchased), format_numbers($ad->imp_used),
+        format_numbers($ad->clickthroughs), $percentage);
+        //date("d M Y H:i:s", $location->opened));
+    }
+  }
+?>
+
+</table>
+
+<p>
+
+<h2>Location Information</h2>
+
+<ul>
+<li><b><a href="editlocation.phtml?id=<?php echo $location->id ?>">Edit this information</a></b>
+</ul>
+
+<p>
+
+<table border=0>
+<tr><td>Owner</td><td><?php echo get_username_by_id("hosts", $location->host_id, $sock) ?></td>
+<td width=10> </td>
+<td>Image Width</td><td><?php echo $location->width ?></td></tr>
+
+<tr><td>Title</td><td><input type="text" size=24 value="<?php echo $location->title ?>"></td>
+<td width=10> </td>
+<td>Image Height</td><td><?php echo $location->height ?></td></tr>
+
+<tr><td>Image Loc</td><td><input type="text" name="img_loc" size=24 maxlength=128 value="<?php echo $location->img_loc ?>"></td>
+<td width=10> </td>
+<td>Email Threshold</td><td><?php echo $location->mail_threshold ?></td></tr>
+
+<tr><td>Active?</td><td><?php echo ($location-> active == 1 ? "Yes" : "No") ?></td>
+<td width=10> </td>
+<td>Use Filters?</td><td><?php echo ($location->filters == 1 ? "Yes" : "No") ?></td></tr>
+
+</table>
+
+
+<p>
+
+</form>
+
+</body>
+</html>
+

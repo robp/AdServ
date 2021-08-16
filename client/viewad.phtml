@@ -1,0 +1,397 @@
+<?php
+  // Get some configuration constants and functions
+  require("../admin/inc/config.inc");
+  require("../admin/inc/classes.inc");
+  require("../admin/inc/functions.inc");
+
+  $sock = db_connect();
+
+  // Set to 0 before registering the session so that anyone sneaky
+  // enough to pass the "advertiser_id" as a URL parameter will have it
+  // overridden.  It can only be written properly by the login page.
+  $advertiser_id = 0;
+  session_register("advertiser_id");
+
+  $advertiser = new Advertiser (0, $advertiser_id, $sock);
+
+  if (!$advertiser->id) {
+    echo "Invalid advertiser ID.";
+    exit();
+  }
+
+  $required1 = array("id");
+
+  // Check to see that all required form inputs are found
+  for ($i = 0; $i < sizeof($required1); $i++) {
+    if (!strlen($$required1[$i])) {
+      $missing_info = 1;
+      break;
+    }
+  }
+
+  if ($missing_info) {
+    $errmsg = "You didn't supply all of the required information.";
+  }
+  else {
+    $ad = new Ad (0, $id, $sock);
+    if ($ad->advertiser_id != $advertiser_id) {
+      echo "Access denied.";
+      exit();
+    }
+    $location = new Location (0, $ad->location_id, $sock);
+  }
+?>
+
+<html>
+
+<head>
+<title><?php echo OWNER_NAME ?> AdServ View Ad</title>
+</head>
+
+<body bgcolor="#ffffff">
+<blockquote>
+<font face="Arial, MS Sans Serif, Helvetica" size=2>
+
+  <table border=0 cellpadding=0 cellspacing=0 width=90%>
+  <tr>
+  <td>
+  <font face="Arial, MS Sans Serif, Helvetica" size=2>
+  <font color=green size=+2><b><?php echo OWNER_NAME ?> AdServ View Ad</b></font><br>
+  <hr noshade size=2>
+  </td>
+  </tr>
+  </table>
+
+  <table border=0 cellpadding=0 cellspacing=0 width=90%>
+  <tr>
+  <td><a href="viewlist.phtml"><img border=0 src="img/button-backtolist.gif" alt="Back To Ad List"></a></td>
+  <td align=right>
+  <font face="Arial, MS Sans Serif, Helvetica" size=2>
+  <b>Advertiser:</b> <?php echo $advertiser->fullname ?> <i>(<?php echo $advertiser->username ?>)</i>
+  </font>
+  </td>
+  </tr>
+  </table>
+
+<p>
+
+<h3>Ad #<?php echo $ad->id?></h3>
+
+
+<center>
+
+<?php
+  if ($ad->active == 1):
+?>
+  <img width="<?php echo $location->width ?>" height="<?php echo $location->height ?>" border="1" src="<?php echo $location->img_loc . $ad->filename ?>" alt="<?php echo $ad->alttext ?>"><p>
+<?php
+  else:
+?>
+  <img width="<?php echo $location->width ?>" height="<?php echo $location->height ?>" border="1" src="<?php echo $location->img_loc . "OLD/" . $ad->filename ?>" alt="<?php echo $ad->alttext ?>"><p>
+<?php
+  endif;
+?>
+
+Alt Text: <b><?php echo $ad->alttext ?></b><br>
+Link URL: <b><a href="<?php echo $ad->link_url ?>"><?php echo $ad->link_url ?></a><p>
+
+<table border=0 cellspacing=0 cellpadding=2 width=80%>
+<tr>
+<td>
+<font face="Arial, MS Sans Serif, Helvetica" size=1>
+Active?
+</font>
+</td>
+<td>
+<font face="Arial, MS Sans Serif, Helvetica" size=1>
+<b>
+<?php if ($ad->active == 1) echo "Yes"; else echo "No"; ?>
+</b>
+</font>
+</td>
+
+<td>
+<font face="Arial, MS Sans Serif, Helvetica" size=1>
+Advertiser
+</font>
+</td>
+<td>
+<font face="Arial, MS Sans Serif, Helvetica" size=1>
+<b>
+<?php echo get_username_by_id("advertisers", $ad->advertiser_id, $sock) ?>
+</b>
+</font>
+</td>
+</tr>
+
+
+<tr>
+<td>
+<font face="Arial, MS Sans Serif, Helvetica" size=1>
+Location
+</font>
+</td>
+<td>
+<font face="Arial, MS Sans Serif, Helvetica" size=1>
+<b>
+<?php echo $location->title ?>
+</b>
+</font>
+</td>
+
+<td>
+<font face="Arial, MS Sans Serif, Helvetica" size=1>
+Filename
+</font>
+</td>
+<td>
+<font face="Arial, MS Sans Serif, Helvetica" size=1>
+<b>
+<?php echo $ad->filename ?>
+</b>
+</font>
+</td>
+</tr>
+
+
+<tr>
+<td>
+<font face="Arial, MS Sans Serif, Helvetica" size=1>
+Imp. Purchased
+</font>
+</td>
+<td>
+<font face="Arial, MS Sans Serif, Helvetica" size=1>
+<b>
+<?php echo format_numbers($ad->imp_purchased) ?>
+</b>
+</font>
+</td>
+
+<td>
+<font face="Arial, MS Sans Serif, Helvetica" size=1>
+Clickthroughs
+</font>
+</td>
+<td>
+<font face="Arial, MS Sans Serif, Helvetica" size=1>
+<b>
+<?php echo $ad->clickthroughs ?>
+</b>
+</font>
+</td>
+</tr>
+
+
+<tr>
+<td>
+<font face="Arial, MS Sans Serif, Helvetica" size=1>
+Imp. Used
+</font>
+</td>
+<td>
+<font face="Arial, MS Sans Serif, Helvetica" size=1>
+<b>
+<?php echo format_numbers($ad->imp_used) ?>
+</b>
+</font>
+</td>
+
+<td>
+<font face="Arial, MS Sans Serif, Helvetica" size=1>
+Click %
+</font>
+</td>
+<td>
+<font face="Arial, MS Sans Serif, Helvetica" size=1>
+<b>
+<?php 
+  $percentage = ($ad->clickthroughs / $ad->imp_used) * 100;
+  printf("%.2f", $percentage);
+  //echo $percentage;
+?>
+</b>
+</font>
+</td>
+</tr>
+
+
+<tr>
+<td>
+<font face="Arial, MS Sans Serif, Helvetica" size=1>
+Opened
+</font>
+</td>
+<td>
+<font face="Arial, MS Sans Serif, Helvetica" size=1>
+<b>
+<?php echo date("m/d/y H:i:s", $ad->opened) ?>
+</b>
+</font>
+</td>
+
+<td>
+<font face="Arial, MS Sans Serif, Helvetica" size=1>
+Frequency
+</font>
+</td>
+<td>
+<font face="Arial, MS Sans Serif, Helvetica" size=1>
+<b>
+<?php echo $ad->frequency ?>
+</b>
+</td>
+</tr>
+
+<tr>
+<td>
+<font face="Arial, MS Sans Serif, Helvetica" size=1>
+Closed
+</td>
+<td>
+<font face="Arial, MS Sans Serif, Helvetica" size=1>
+<b>
+<?php 
+  if ($ad->closed > 0)
+    echo date("m/d/y H:i:s", $ad->closed);
+  else
+    echo "Never";
+?>
+</b>
+</font>
+</td>
+</tr>
+</table>
+
+</center>
+
+<h3>Clickthrough Information</h3>
+
+<table border=1 width=90% cellspacing=0 cellpadding=4>
+<tr bgcolor=#000000>
+<th><font face="Arial, MS Sans Serif, Helvetica" size=2 color=#d9d9d9>
+ID
+</font></th>
+<th><font face="Arial, MS Sans Serif, Helvetica" size=2 color=#d9d9d9>
+Imp. #
+</font></th>
+<th><font face="Arial, MS Sans Serif, Helvetica" size=2 color=#d9d9d9>
+Displayed
+</font></th>
+<th><font face="Arial, MS Sans Serif, Helvetica" size=2 color=#d9d9d9>
+Clicked
+</font></th>
+<th><font face="Arial, MS Sans Serif, Helvetica" size=2 color=#d9d9d9>
+View Time
+</font></th>
+<th><font face="Arial, MS Sans Serif, Helvetica" size=2 color=#d9d9d9>
+Remote Host
+</font></th>
+<th><font face="Arial, MS Sans Serif, Helvetica" size=2 color=#d9d9d9>
+Click URL
+</font></th>
+<th><font face="Arial, MS Sans Serif, Helvetica" size=2 color=#d9d9d9>
+User Agent
+</font></th>
+</tr>
+
+<?php
+  $query = "SELECT * FROM clicks
+            WHERE ad_id = " . $ad->id;
+
+  if (!$sql_result = mysql_query($query, $sock)) {
+    echo mysql_error();
+    html_exit();
+  }
+
+  $num_rows = mysql_num_rows($sql_result);
+
+  for ($i = 0; $i < $num_rows; $i++) {
+    if ($i % 2) {
+      $fc = "#000000";
+      $bc = "#e0f0e0";
+    }
+    else {
+      $fc = "#000000";
+      $bc = "#d9d9d9";
+    }
+ 
+    $click = new Click (mysql_fetch_row($sql_result));
+    printf("<tr bgcolor=\"%s\">
+<td nowrap align=center>
+<font face=\"Arial, MS Sans Serif, Helvetica\" size=1 color=\"%s\">
+%d
+</font>
+</td>
+<td nowrap align=center>
+<font face=\"Arial, MS Sans Serif, Helvetica\" size=1 color=\"%s\">
+%d
+</font>
+</td>
+<td nowrap>
+<font face=\"Arial, MS Sans Serif, Helvetica\" size=1 color=\"%s\">
+%s
+</font>
+</td>
+<td nowrap>
+<font face=\"Arial, MS Sans Serif, Helvetica\" size=1 color=\"%s\">
+%s
+</font>
+</td>
+<td nowrap align=right>
+<font face=\"Arial, MS Sans Serif, Helvetica\" size=1 color=\"%s\">
+%d
+</font>
+</td>
+<td nowrap>
+<font face=\"Arial, MS Sans Serif, Helvetica\" size=1 color=\"%s\">
+%s
+</font>
+</td>
+<td nowrap>
+<font face=\"Arial, MS Sans Serif, Helvetica\" size=1 color=\"%s\">
+<a href=\"%s\">%s</a>&nbsp;
+</font>
+</td>
+<td nowrap>
+<font face=\"Arial, MS Sans Serif, Helvetica\" size=1 color=\"%s\">
+%s
+</font>
+</td>
+</tr>\n",
+      $bc,
+      $fc, $click->id,
+      $fc, $click->imp,
+      $fc, date("m/d/y H:i:s", $click->dtime),
+      $fc, date("m/d/y H:i:s", $click->time),
+      $fc, $click->time - $click->dtime,
+      $fc, $click->host,
+      $fc, $click->url, $click->url,
+      $fc, $click->agent);
+  }
+?>
+
+</table>
+
+<p>
+
+  <table border=0 cellpadding=0 cellspacing=0 width=90%>
+  <tr><td colspan=2><hr noshade size=2></td></tr>
+  <tr>
+  <td>
+  <font face="Arial, MS Sans Serif, Helvetica" size=2>
+  <i>AdServ version <?php echo ADSERV_VERSION ?>
+  </font>
+  </td>
+  <td align=right>
+  <font face="Arial, MS Sans Serif, Helvetica" size=2>
+  <i><b><a href="mailto:<?php echo EMAIL_SENDER_ADDRESS ?>"><font color=green><?php echo EMAIL_SENDER_ADDRESS ?></font></a></b></i>
+  </font>
+  </td>
+  </tr>
+  </table>
+
+</blockquote>
+</body>
+</html>
+

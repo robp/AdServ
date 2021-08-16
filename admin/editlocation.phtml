@@ -1,0 +1,149 @@
+<?php
+  // Get some configuration constants and functions
+  require("inc/config.inc");
+  require("inc/classes.inc");
+  require("inc/functions.inc");
+
+  $sock = db_connect();
+
+  $required1 = array("host_id", "title", "img_loc", "width",
+                     "height", "filters", "mail_threshold");
+
+  // Check to see that all required form inputs are found
+  if ($step) {
+    for ($i = 0; $i < sizeof($required1); $i++) {
+      if (!strlen($$required1[$i])) {
+        $missing_info = 1;
+        break;
+      }
+    }
+  }
+
+  if ($id) {
+    $location = new Location(0, $id, $sock);
+    if (!$location->id) {
+      $errmsg = "Location ID supplied does not exist.";
+      $missing_info = 1;
+    }
+  }
+  else {
+    $location = new Location();
+  }
+
+  if ($step) {
+    if ($missing_info) {
+      $errmsg = "You didn't supply all of the required information.";
+    }
+    else {
+      // Format inputs
+      $title = trim($title);
+
+      if (strrpos($img_loc, "/") != strlen($img_loc) - 1) {
+        $img_loc .= "/";
+      }
+
+      // Make sure the image dimensions are numeric
+      if ($width > 0 && $height > 0) {
+        $location = new Location();
+        $location->title = $title;
+        $location->width = $width;
+        $location->height = $height;
+        $location->host_id = $host_id;
+        $location->img_loc = $img_loc;
+        $location->filters = $filters;
+        $location->freq_cnt = 0;
+        $location->freq_cnt = 0;
+        $location->next_ad = 0;
+        $location->mail_threshold = $mail_threshold;
+        $location->opened = time();
+        $location->closed = 0;
+
+
+        // If this is a new location, create an opened timestamp
+        if (!$location->id) {
+          $location->opened = time();
+        }
+        // If this is an existing active location, and it 
+        // is being deactivated, create a closing timestamp
+        if ($location->id && $location->active == 1 && $active == 0) {
+          $location->closed = time();
+        }
+        else {
+          $location->closed = 0;
+        }
+
+        $location->active = $active;
+
+        if ($location->id) {
+          $location->update($sock);
+          $errmsg = "Location " . $location->id . " updated.";
+        }
+        else {
+          $location->insert($sock);
+          $errmsg = "Location " . $location->id . " added.";
+        }
+      }
+      else {
+        $errmsg = "Width or height specified is not a valid integer.";
+        $missing_info = 1;
+      }
+    }
+  }
+?>
+
+<html>
+
+<head>
+<title>AdServ Administrator: Edit Location</title>
+</head>
+
+<body bgcolor="#ffffff">
+<blockquote>
+<h1>AdServ Administrator</h1>
+
+<h2>Edit Location</h2>
+
+Enter all of the following information about the new location, then press the Edit Location button.<p>
+
+<ul>
+<li><b><a href="index.phtml">Back to the AdServ Administrator</a></b>
+</ul>
+
+<p>
+
+<?php if ($step) echo "<font color=\"#ff0000\"><b>" . $errmsg . "</b></font>"; ?><p>
+
+<form action="<?php echo $PHP_SELF ?>" method="post">
+<input type="hidden" name="step" value="1">
+<input type="hidden" name="id" value="<?php echo $location->id ?>">
+
+<table border=0>
+<tr><td>Owner</td><td><select name="host_id"><option value=""> <?php list_hosts_select($location->host_id, $sock) ?></select></td>
+<td width=10> </td>
+<td>Image Width</td><td><input type="text" name="width" value="<?php echo $location->width ?>" size=4 maxlength=4></td></tr>
+
+
+<tr><td>Title</td><td><input type="text" name="title" value="<?php echo $location->title ?>" size=24 maxlength=128></td>
+<td width=10> </td>
+<td>Image Height</td><td><input type="text" name="height" value="<?php echo $location->height ?>" size=4 maxlength=4></td></tr>
+
+
+<tr><td>Image Loc</td><td><input type="text" name="img_loc" size=24 maxlength=128 value="<?php echo $location->img_loc ?>"></td>
+<td width=10> </td>
+<td>Email Threshold</td><td><input type="text" name="mail_threshold" value="<?php echo $location->mail_threshold ?>" size=6 maxlength=10></td></tr>
+
+
+<tr><td>Active</td><td><input type="radio" name="active" value="1"<?php if ($location->active == 1) echo " checked" ?>> Yes<br><input type="radio" name="active" value="0"<?php if ($location->active == 0) echo " checked" ?>> No</td>
+<td width=10> </td>
+<td>Use Filters?</td><td><input type="radio" name="filters" value="1"<?php if ($location->filters == 1) echo " checked" ?>> Yes<br>
+<input type="radio" name="filters" value="0"<?php if ($location->filters == 0) echo " checked" ?>> No</td></tr>
+
+<tr></tr>
+<tr><td></td><td colspan=3><input type="reset" value="Undo Changes"> &nbsp;&nbsp; <input type="submit" value="Edit Location"></td></tr>
+</table>
+
+</form>
+
+</body>
+</html>
+
